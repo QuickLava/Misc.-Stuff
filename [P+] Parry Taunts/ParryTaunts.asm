@@ -1,5 +1,5 @@
 ##################################################################################################
-Parry Taunts v1.0.0 [QuickLava]
+Parry Taunts v1.0.1 [QuickLava]
 # Getting hit within the first 15.0f frames of a taunt will leave you actionable!
 # Getting hit within frames 16.0f - 30.0f will instead knock the user back a fixed distance!
 ##################################################################################################
@@ -82,6 +82,7 @@ parrySuccessful:
                                  # Cancel Status Change!
   lwz r12, 0x44(r1)              # Recover LR from the stack...
   mtlr r12                       # ... and restore it to LR.
+  lmw r29, 0x34(r1)              # Restore r29 - r31.
   addi r1, r1, 0x40              # Deallocate the stack...
   blr                            # ... and return so we stay in taunt!
 
