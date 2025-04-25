@@ -63,3 +63,14 @@ rolledMenuBGM:               # If we're rolling Menu Music though...
 exit:
   addi r11, r1, 0x30         # Restore Original Instruction
 }
+# Thwart Forced Changing of Menu Music from BootToCSS.asm
+# Note: Unnecessary if you remove the `op b 0x10 @ $80078E14` line in that file instead!
+HOOK @ $80078E24    # 0x78 bytes into symbol "isSeLoaded/[sndSystem]/snd_system.o" @ 0x80078DAC
+{
+  cmpwi r30, 0x0             # Check if r30 was zero...
+  bne store                  # ... and if it wasn't, we wanted to overwrite the active Menu Track, so just store.
+  lwz r3, 0x190(r28)         # Otherwise, we need to respect current track; load its ID...
+  stw r3, 0x178(r28)         # ... and store it over the track to use next.
+store:
+  stw r3, 0x190(r28)         # Restore Original Instruction
+}
