@@ -1,5 +1,5 @@
 #######################################################################################################
-Sound Test and My Music Choices Persist Between Menus v1.1.0 [QuickLava]
+Sound Test and My Music Choices Persist Between Menus (Standalone Ver.) v1.1.5 [QuickLava]
 # Alternate Version of "Menu Music Sticks Between Menu Transitions"
 # Makes it so that starting a song from the Sound Test or My Music sub-menus registers
 # that song as the active menu song, preventing it from being re-rolled when moving between menus.
@@ -25,9 +25,26 @@ HOOK @ $80073F64    # 0x1B4 bytes into symbol "playBGM/[sndSystem]/snd_system.o"
   cmplwi r12, 0x544C         # ... and check that it's value is what we expect.
   bne exit                   # If it isn't, the TLST system isn't active, so we can skip the below.
   li r12, 0x0026             # Otherwise though, a TLST *is* loaded! In which case, set up the Menu TLST ID...
-  sth r12 -0x1048(r11)       # ... and store it over the actual ID to prevent discarding the active TLST.
+  sth r12, -0x1080(r11)      # ... and store it over the ID in ASL_DATA, for use in preserving the active TLST via the following PULSE!
 exit:
   lwz r0, 0x24(r1)           # Restore Original Instruction
+}
+# Prevent Clearing TLST ID to Preserve Active TLST
+PULSE
+{
+  lis r11, 0x8054            # Set up top half of address register...
+  lhz r12, -0x0E00(r11)      # ... try to grab the top half of the loaded TLST's magic from 0x8053F200...
+  cmplwi r12, 0x544C         # ... and check that it's value is what we expect.
+  bnelr                      # If it isn't, the TLST system isn't active, so we can skip the below.
+  lhz r12 -0x1048(r11)       # Grab the copy of the ID used for deciding whether to block a TLST reload...
+  cmplwi r12, 0x00           # ... and check if it's currently zero'd out.
+  bnelr+                     # If it's not zero, we don't need to do anything extra, so exit.
+  lhz r12, -0x1080(r11)      # Otherwise, grab the previous TLST ID from ASL_DATA... 
+  cmplwi r12, 0x0026         # ... and check if it's 0x26, the Menu ID.
+  bnelr+                     # If it isn't, we don't need to force-restore it, so skip.
+  sth r12 -0x1048(r11)       # Otherwise though, store it over the actual ID to prevent discarding the active TLST!
+exit:
+  blr
 }
 # Randomizing Non-Menu BGM Forces Next Menu BGM Re-Roll to be Registered as Menu Track
 HOOK @ $800793F8    # 0x1BC bytes into symbol "setBgmId/[sndBgmRateSystem]/snd_bgmsys.o" @ 0x8007923C
