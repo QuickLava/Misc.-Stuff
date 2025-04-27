@@ -25,7 +25,8 @@ HOOK @ $80073F64    # 0x1B4 bytes into symbol "playBGM/[sndSystem]/snd_system.o"
   cmplwi r12, 0x544C         # ... and check that it's value is what we expect.
   bne exit                   # If it isn't, the TLST system isn't active, so we can skip the below.
   li r12, 0x0026             # Otherwise though, a TLST *is* loaded! In which case, set up the Menu TLST ID...
-  sth r12, -0x1080(r11)      # ... and store it over the ID in ASL_DATA, for use in preserving the active TLST via the following PULSE!
+  sth r12, -0x1048(r11)      # \ ... and store it over the load check ID (to avoid reloading the TLST)...
+  sth r12, -0x1080(r11)      # / ... and over the ID in ASL_DATA, for use in preserving the active TLST via the following PULSE!
 exit:
   lwz r0, 0x24(r1)           # Restore Original Instruction
 }
