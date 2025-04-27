@@ -1,5 +1,5 @@
 #######################################################################################################
-Sound Test and My Music Choices Persist Between Menus (Standalone Ver.) v1.1.5 [QuickLava]
+Sound Test and My Music Choices Persist Between Menus (Standalone Ver.) v1.2.0 [QuickLava]
 # Alternate Version of "Menu Music Sticks Between Menu Transitions"
 # Makes it so that starting a song from the Sound Test or My Music sub-menus registers
 # that song as the active menu song, preventing it from being re-rolled when moving between menus.
