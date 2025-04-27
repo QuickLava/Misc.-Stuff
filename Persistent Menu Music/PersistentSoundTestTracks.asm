@@ -30,7 +30,7 @@ HOOK @ $80073F64    # 0x1B4 bytes into symbol "playBGM/[sndSystem]/snd_system.o"
 exit:
   lwz r0, 0x24(r1)           # Restore Original Instruction
 }
-# Prevent Clearing TLST ID to Preserve Active TLST
+# Restore Cleared TLST ID when leaving SSS Sound Test to Avoid TLST Reload
 PULSE
 {
   lis r11, 0x8054            # Set up top half of address register...
@@ -47,7 +47,7 @@ PULSE
 exit:
   blr
 }
-# Randomizing Non-Menu BGM Forces Next Menu BGM Re-Roll to be Registered as Menu Track
+# Menu Track of 0x00 Force Accepts Next Re-Roll, Randomizing Non-Menu BGM Forces Menu Track to 0x00!
 HOOK @ $800793F8    # 0x1BC bytes into symbol "setBgmId/[sndBgmRateSystem]/snd_bgmsys.o" @ 0x8007923C
 {
   cmplwi r29, 0x2A           # Check if we re-rolled Menu Music...
@@ -63,6 +63,36 @@ rolledMenuBGM:               # If we're rolling Menu Music though...
   stw r3, 0x190(r28)         # ... but if so, store newly rolled track to register it!
 exit:
   addi r11, r1, 0x30         # Restore Original Instruction
+}
+# Fallback to Force Menu Music if we Leave Sound Test without Picking a Track
+HOOK @ $80078DDC    # 0x30 bytes into symbol "isSeLoaded/[sndSystem]/snd_system.o" @ 0x80078DAC
+{
+  mr r28, r3                 # Restore Original Instruction
+  beq %END%                  # If the game's previous comparison to -1 passed, just exit.
+  cmplwi r4, 0x2A            # \
+  bne exit                   # / If we're not rolling for menu music, exit early!
+  lis r11, 0x805A            # \
+  lwz r12, 0x01D0(r11)       # / Grab the sndSystem pointer...
+  lwz r12, 0x06E0(r12)       # ... then grab the pointer to the currently playing song.
+  cmplwi r12, 0x00           # Check if it's null...
+  bne exit                   # ... and if not, something's playing, so continue as normal.
+  li r0, 0x00                # \
+  stw r0, 0x190(r3)          # / Otherwise, zero out the active Menu Track to trigger a reroll!
+                             # We may also have to force a TLST reload if that system is active.
+  lis r11, 0x8054            # Set up top half of address register...
+  lhz r0, -0x0E00(r11)       # ... try to grab the top half of the loaded TLST's magic from 0x8053F200...
+  cmplwi r0, 0x544C          # ... and check that it's value is what we expect.
+  bne exit                   # If not, no TLST is loaded, so just jump down to storing our new value.
+  li r3, 0x26		         # \
+  addi r12, r11, -0x2000     # |
+  mtctr r12                  # | Force load Menu TLST!
+  bctrl                      # /
+  mr r3, r28                 # \
+  mr r4, r29                 # | Restore Function Arg Regs
+  mr r5, r30                 # /
+exit:
+  addis r0, r5, 0x1          # \
+  cmplwi r0, 0xFFFF          # / Recreate Original CR State
 }
 # Thwart Forced Changing of Menu Music from BootToCSS.asm
 # Note: Unnecessary if you remove the `op b 0x10 @ $80078E14` line in that file instead!
